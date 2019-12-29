@@ -337,7 +337,7 @@ void Item_modifier::modify( item &new_item ) const
                           !new_item.magazine_current();
 
         if( spawn_mag ) {
-            new_item.contents.emplace_back( new_item.magazine_default(), new_item.birthday() );
+            new_item.contents.insert_legacy( item( new_item.magazine_default(), new_item.birthday() ) );
         }
 
         if( spawn_ammo ) {
@@ -351,13 +351,23 @@ void Item_modifier::modify( item &new_item ) const
     }
 
     if( !cont.is_null() ) {
-        cont.put_in( new_item );
+        if( cont.type->can_use( "holster" ) ) {
+            cont.put_in( new_item, item_pocket::pocket_type::CONTAINER );
+        } else {
+            cont.put_in( new_item );
+        }
         new_item = cont;
     }
 
     if( contents != nullptr ) {
         Item_spawn_data::ItemList contentitems = contents->create( new_item.birthday() );
-        new_item.contents.insert( new_item.contents.end(), contentitems.begin(), contentitems.end() );
+        for( item &it : contentitems ) {
+            if( new_item.type->can_use( "holster" ) ) {
+                new_item.put_in( it, item_pocket::pocket_type::CONTAINER );
+            } else {
+                new_item.put_in( it );
+            }
+        }
     }
 
     for( auto &flag : custom_flags ) {

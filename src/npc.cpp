@@ -966,7 +966,7 @@ void npc::do_npc_read()
         if( !ch ) {
             return;
         }
-        item &chosen = i_at( loc.obtain( *ch ) );
+        item &chosen = *loc.obtain( *ch );
         if( can_read( chosen, fail_reasons ) ) {
             if( g->u.sees( pos() ) ) {
                 add_msg( m_info, _( "%s starts reading." ), disp_name() );
@@ -2731,7 +2731,7 @@ bool npc::dispose_item( item_location &&obj, const std::string & )
         if( e.can_holster( *obj ) ) {
             auto ptr = dynamic_cast<const holster_actor *>( e.type->get_use( "holster" )->get_actor_ptr() );
             opts.emplace_back( dispose_option {
-                item_store_cost( *obj, e, false, ptr->draw_cost ),
+                item_store_cost( *obj, e, false, e.contents.obtain_cost( *obj ) ),
                 [this, ptr, &e, &obj]{ ptr->store( *this, e, *obj ); }
             } );
         }

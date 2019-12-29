@@ -158,7 +158,7 @@ static pickup_answer handle_problematic_pickup( const item &it, bool &offered_sw
     }
     if( it.is_bucket_nonempty() ) {
         amenu.addentry( SPILL, u.can_pickVolume( it ), 's', _( "Spill %s, then pick up %s" ),
-                        it.contents.front().tname(), it.display_name() );
+                        it.contents.legacy_front().tname(), it.display_name() );
     }
 
     amenu.query();
@@ -243,7 +243,7 @@ bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool &offer
         }
     }
     if( newit.invlet != '\0' &&
-        u.invlet_to_position( newit.invlet ) != INT_MIN ) {
+        u.invlet_to_item( newit.invlet ) != nullptr ) {
         // Existing invlet is not re-usable, remove it and let the code in player.cpp/inventory.cpp
         // add a new invlet, otherwise keep the (usable) invlet.
         newit.invlet = '\0';
@@ -366,7 +366,6 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
 {
     bool got_water = false;
     bool weight_is_okay = ( g->u.weight_carried() <= g->u.weight_capacity() );
-    bool volume_is_okay = ( g->u.volume_carried() <= g->u.volume_capacity() );
     bool offered_swap = false;
 
     // Map of items picked up so we can output them all at the end and
@@ -399,9 +398,6 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
     }
     if( weight_is_okay && g->u.weight_carried() > g->u.weight_capacity() ) {
         add_msg( m_bad, _( "You're overburdened!" ) );
-    }
-    if( volume_is_okay && g->u.volume_carried() > g->u.volume_capacity() ) {
-        add_msg( m_bad, _( "You struggle to carry such a large volume!" ) );
     }
 
     return !problem;
@@ -947,19 +943,11 @@ void Pickup::pick_up( const tripoint &p, int min, from_where get_items_from )
                 }
 
                 auto weight_predict = g->u.weight_carried() + weight_picked_up;
-                auto volume_predict = g->u.volume_carried() + volume_picked_up;
 
                 mvwprintz( w_pickup, point( 5, 0 ), weight_predict > g->u.weight_capacity() ? c_red : c_white,
                            _( "Wgt %.1f" ), round_up( convert_weight( weight_predict ), 1 ) );
 
                 wprintz( w_pickup, c_white, "/%.1f", round_up( convert_weight( g->u.weight_capacity() ), 1 ) );
-
-                std::string fmted_volume_predict = format_volume( volume_predict );
-                wprintz( w_pickup, volume_predict > g->u.volume_capacity() ? c_red : c_white, _( "  Vol %s" ),
-                         fmted_volume_predict );
-
-                std::string fmted_volume_capacity = format_volume( g->u.volume_capacity() );
-                wprintz( w_pickup, c_white, "/%s", fmted_volume_capacity );
             }
 
             wrefresh( w_pickup );
@@ -1050,7 +1038,7 @@ void show_pickup_message( const PickupMap &mapPickup )
 bool Pickup::handle_spillable_contents( Character &c, item &it, map &m )
 {
     if( it.is_bucket_nonempty() ) {
-        const item &it_cont = it.contents.front();
+        const item &it_cont = it.contents.legacy_front();
         int num_charges = it_cont.charges;
         while( !it.spill_contents( c ) ) {
             if( num_charges > it_cont.charges ) {

@@ -93,6 +93,7 @@
 #include "requirements.h"
 #include "stats_tracker.h"
 #include "vpart_position.h"
+#include "generic_factory.h"
 
 struct oter_type_t;
 struct mutation_branch;
@@ -150,6 +151,54 @@ static void deserialize( weak_ptr_fast<monster> &obj, JsonIn &jsin )
     //    }
 }
 
+void item_contents::serialize( JsonOut &json ) const
+{
+    if( !contents.empty() ) {
+        json.start_object();
+
+        json.member( "contents", contents );
+
+        json.end_object();
+    }
+}
+
+void item_contents::deserialize( JsonIn &jsin )
+{
+    JsonObject data = jsin.get_object();
+    data.read( "contents", contents );
+}
+
+void item_pocket::serialize( JsonOut &json ) const
+{
+    if( !contents.empty() ) {
+        json.start_object();
+        json.member( "pocket_type", data->type );
+        json.member( "contents", contents );
+        json.end_object();
+    }
+}
+
+void item_pocket::deserialize( JsonIn &jsin )
+{
+    JsonObject data = jsin.get_object();
+    data.read( "contents", contents );
+    int saved_type_int;
+    data.read( "pocket_type", saved_type_int );
+    _saved_type = static_cast<item_pocket::pocket_type>( saved_type_int );
+}
+
+void pocket_data::deserialize( JsonIn &jsin )
+{
+    JsonObject data = jsin.get_object();
+    load( data );
+}
+
+void item_number_overrides::deserialize( JsonIn &jsin )
+{
+    JsonObject data = jsin.get_object();
+    load( data );
+}
+
 std::vector<item> item::magazine_convert()
 {
     std::vector<item> res;
@@ -182,9 +231,9 @@ std::vector<item> item::magazine_convert()
                               calendar::turn, qty );
         }
 
-        contents.erase( std::remove_if( contents.begin(), contents.end(), []( const item & e ) {
+        contents.remove_items_if( []( const item & e ) {
             return e.typeId() == "spare_mag" || e.typeId() == "clip" || e.typeId() == "clip2";
-        } ), contents.end() );
+        } );
 
         return res;
     }
@@ -196,11 +245,11 @@ std::vector<item> item::magazine_convert()
 
     // give base item an appropriate magazine and add to that any ammo originally stored in base item
     if( !magazine_current() ) {
-        contents.push_back( mag );
+        contents.insert_legacy( mag );
         if( charges > 0 ) {
             ammo.charges = std::min( charges, mag.ammo_capacity() );
             charges -= ammo.charges;
-            contents.back().contents.push_back( ammo );
+            contents.legacy_back().contents.insert_legacy( ammo );
         }
     }
 
@@ -210,7 +259,7 @@ std::vector<item> item::magazine_convert()
         if( spare_mag->charges > 0 ) {
             ammo.charges = std::min( spare_mag->charges, mag.ammo_capacity() );
             charges += spare_mag->charges - ammo.charges;
-            res.back().contents.push_back( ammo );
+            res.back().contents.insert_legacy( ammo );
         }
     }
 
@@ -221,9 +270,9 @@ std::vector<item> item::magazine_convert()
     }
 
     // remove incompatible magazine mods
-    contents.erase( std::remove_if( contents.begin(), contents.end(), []( const item & e ) {
+    contents.remove_items_if( []( const item & e ) {
         return e.typeId() == "spare_mag" || e.typeId() == "clip" || e.typeId() == "clip2";
-    } ), contents.end() );
+    } );
 
     // normalize the base item and mark it as converted
     charges = 0;
@@ -2177,7 +2226,6 @@ void item::io( Archive &archive )
     archive.io( "techniques", techniques, io::empty_default_tag() );
     archive.io( "faults", faults, io::empty_default_tag() );
     archive.io( "item_tags", item_tags, io::empty_default_tag() );
-    archive.io( "contents", contents, io::empty_default_tag() );
     archive.io( "components", components, io::empty_default_tag() );
     archive.io( "specific_energy", specific_energy, -10 );
     archive.io( "temperature", temperature, 0 );
@@ -2263,9 +2311,9 @@ void item::io( Archive &archive )
     }
 
     // Fixes #16751 (items could have null contents due to faulty spawn code)
-    contents.erase( std::remove_if( contents.begin(), contents.end(), []( const item & cont ) {
+    contents.remove_items_if( []( const item & cont ) {
         return cont.is_null();
-    } ), contents.end() );
+    } );
 
     // Sealed item migration: items with "unseals_into" set should always have contents
     if( contents.empty() && is_non_resealable_container() ) {
@@ -2343,57 +2391,23 @@ static void migrate_toolmod( item &it )
             it.item_tags.erase( "NO_UNLOAD" );
             it.item_tags.erase( "RADIOACTIVE" );
             it.item_tags.erase( "LEAK_DAM" );
-            it.emplace_back( "battery_atomic" );
+            it.contents.insert_legacy( item( "battery_atomic" ) );
 
         } else if( it.item_tags.count( "DOUBLE_REACTOR" ) ) {
             it.item_tags.erase( "DOUBLE_REACTOR" );
             it.item_tags.erase( "DOUBLE_AMMO" );
-            it.emplace_back( "double_plutonium_core" );
+            it.contents.insert_legacy( item( "double_plutonium_core" ) );
 
         } else if( it.item_tags.count( "DOUBLE_AMMO" ) ) {
             it.item_tags.erase( "DOUBLE_AMMO" );
-            it.emplace_back( "battery_compartment" );
+            it.contents.insert_legacy( item( "battery_compartment" ) );
 
         } else if( it.item_tags.count( "USE_UPS" ) ) {
             it.item_tags.erase( "USE_UPS" );
             it.item_tags.erase( "NO_RELOAD" );
             it.item_tags.erase( "NO_UNLOAD" );
-            it.emplace_back( "battery_ups" );
+            it.contents.insert_legacy( item( "battery_ups" ) );
 
-        }
-    }
-
-    // Fix fallout from #18797, which exponentially duplicates migrated toolmods
-    if( it.is_toolmod() ) {
-        // duplication would add an extra toolmod inside each toolmod on load;
-        // delete the nested copies
-        if( it.typeId() == "battery_atomic" || it.typeId() == "battery_compartment" ||
-            it.typeId() == "battery_ups" || it.typeId() == "double_plutonium_core" ) {
-            // Be conservative and only delete nested mods of the same type
-            it.contents.remove_if( [&]( const item & cont ) {
-                return cont.typeId() == it.typeId();
-            } );
-        }
-    }
-
-    if( it.is_tool() ) {
-        // duplication would add an extra toolmod inside each tool on load;
-        // delete the duplicates so there is only one copy of each toolmod
-        int n_atomic = 0;
-        int n_compartment = 0;
-        int n_ups = 0;
-        int n_plutonium = 0;
-
-        // not safe to use remove_if with a stateful predicate
-        for( auto i = it.contents.begin(); i != it.contents.end(); ) {
-            if( ( i->typeId() == "battery_atomic" && ++n_atomic > 1 ) ||
-                ( i->typeId() == "battery_compartment" && ++n_compartment > 1 ) ||
-                ( i->typeId() == "battery_ups" && ++n_ups > 1 ) ||
-                ( i->typeId() == "double_plutonium_core" && ++n_plutonium > 1 ) ) {
-                i = it.contents.erase( i );
-            } else {
-                ++i;
-            }
         }
     }
 }
@@ -2407,12 +2421,42 @@ void item::deserialize( JsonIn &jsin )
     if( savegame_loading_version < 27 ) {
         legacy_fast_forward_time();
     }
+    contents = item_contents( type->pockets );
+    // migration code, used to be std::list<item>
+    if( data.has_array( "contents" ) ) {
+        std::list<item> item_list;
+        data.read( "contents", item_list );
+        if( type->get_use( "holster" ) ) {
+            for( const item &it : item_list ) {
+                if( !contents.insert_item( it, item_pocket::pocket_type::CONTAINER ).success() ) {
+                    contents.force_insert_item( it, item_pocket::pocket_type::CONTAINER );
+                }
+            }
+        } else {
+            for( const item &it : item_list ) {
+                contents.insert_legacy( it );
+            }
+        }
+    } else if( data.has_object( "contents" ) ) {
+        // savegame is most recent
+        item_contents temp_contents;
+        data.read( "contents", temp_contents );
+        contents.combine( temp_contents );
+        if( savegame_loading_version == 27 ) {
+            if( type->get_use( "holster" ) ) {
+                contents.move_legacy_to_pocket_type( item_pocket::pocket_type::CONTAINER );
+            }
+        }
+    }
 }
 
 void item::serialize( JsonOut &json ) const
 {
     io::JsonObjectOutputArchive archive( json );
     const_cast<item *>( this )->io( archive );
+    if( !contents.empty() ) {
+        json.member( "contents", contents );
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

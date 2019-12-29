@@ -17,6 +17,7 @@
 #include "catacharset.h"
 #include "debug.h"
 #include "enums.h"
+#include "generic_factory.h"
 #include "init.h"
 #include "item.h"
 #include "item_category.h"
@@ -805,7 +806,6 @@ void Item_factory::init()
     add_iuse( "BREAK_STICK", &iuse::break_stick );
 
     add_actor( std::make_unique<ammobelt_actor>() );
-    add_actor( std::make_unique<bandolier_actor>() );
     add_actor( std::make_unique<cauterize_actor>() );
     add_actor( std::make_unique<consume_drug_iuse>() );
     add_actor( std::make_unique<delayed_transform_iuse>() );
@@ -1531,7 +1531,6 @@ void Item_factory::load( islot_armor &slot, const JsonObject &jo, const std::str
     assign( jo, "environmental_protection", slot.env_resist, strict, 0 );
     assign( jo, "environmental_protection_with_filter", slot.env_resist_w_filter, strict, 0 );
     assign( jo, "warmth", slot.warmth, strict, 0 );
-    assign( jo, "storage", slot.storage, strict, 0_ml );
     assign( jo, "weight_capacity_modifier", slot.weight_capacity_modifier );
     assign( jo, "weight_capacity_bonus", slot.weight_capacity_bonus, strict, 0_gram );
     assign( jo, "power_armor", slot.power_armor, strict );
@@ -2073,7 +2072,6 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
     assign( jo, "cutting", def.melee[DT_CUT], strict, 0 );
     assign( jo, "to_hit", def.m_to_hit, strict );
     assign( jo, "container", def.default_container );
-    assign( jo, "rigid", def.rigid );
     assign( jo, "min_strength", def.min_str );
     assign( jo, "min_dexterity", def.min_dex );
     assign( jo, "min_intelligence", def.min_int );
@@ -2221,6 +2219,8 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
         }
     }
 
+    assign( jo, "pocket_data", def.pockets );
+
     load_slot_optional( def.container, jo, "container_data", src );
     load_slot_optional( def.armor, jo, "armor_data", src );
     load_slot_optional( def.pet_armor, jo, "pet_armor_data", src );
@@ -2303,17 +2303,17 @@ void Item_factory::migrate_item( const itype_id &id, item &obj )
             obj.charges = iter->second.charges;
         }
 
-        for( const auto &c : iter->second.contents ) {
-            if( std::none_of( obj.contents.begin(), obj.contents.end(), [&]( const item & e ) {
-            return e.typeId() == c;
-            } ) ) {
-                obj.emplace_back( c, obj.birthday() );
+        for( const std::string &c : iter->second.contents ) {
+            if( obj.contents.get_item_with( [&]( const item & e ) {
+            return e.typeId() != c;
+            } ) == nullptr ) {
+                obj.contents.insert_legacy( item( c, obj.birthday() ) );
             }
         }
 
         // check contents of migrated containers do not exceed capacity
         if( obj.is_container() && !obj.contents.empty() ) {
-            item &child = obj.contents.back();
+            item &child = obj.contents.legacy_back();
             const int capacity = child.charges_per_volume( obj.get_container_capacity() );
             child.charges = std::min( child.charges, capacity );
         }

@@ -15,6 +15,7 @@
 #include "enums.h" // point
 #include "explosion.h"
 #include "game_constants.h"
+#include "item_contents.h"
 #include "iuse.h" // use_function
 #include "optional.h"
 #include "pldata.h" // add_type
@@ -259,10 +260,6 @@ struct islot_armor {
      * How much warmth this item provides.
      */
     int warmth = 0;
-    /**
-     * How much storage this items provides when worn.
-     */
-    units::volume storage = 0_ml;
     /**
     * Factor modifiying weight capacity
     */
@@ -926,6 +923,9 @@ struct itype {
         /** Weight difference with the part it replaces for mods */
         units::mass integral_weight = -1_gram;
 
+        // information related to being able to store things inside the item.
+        std::vector<pocket_data> pockets;
+
         /**
          * Space occupied by items of this type
          * CAUTION: value given is for a default-sized stack. Avoid using where @ref count_by_charges items may be encountered; see @ref item::volume instead.
@@ -945,10 +945,6 @@ struct itype {
         units::money price = 0_cent;
         /** Value after cataclysm, dependent upon practical usages. Price given is for a default-sized stack. */
         units::money price_post = -1_cent;
-
-        /**@}*/
-        // If non-rigid volume (and if worn encumbrance) increases proportional to contents
-        bool rigid = true;
 
         /** Damage output in melee for zero or more damage types */
         std::array<int, NUM_DT> melee;

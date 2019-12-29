@@ -750,7 +750,7 @@ void player::sort_armor()
             if( loc ) {
                 // wear the item
                 cata::optional<std::list<item>::iterator> new_equip_it =
-                    wear( this->i_at( loc.obtain( *this ) ) );
+                    wear( *loc.obtain( *this ) );
                 if( new_equip_it ) {
                     body_part bp = static_cast<body_part>( tabindex );
                     if( tabindex == num_bp || ( **new_equip_it ).covers( bp ) ) {
@@ -778,7 +778,7 @@ void player::sort_armor()
             if( loc ) {
                 // wear the item
                 if( cata::optional<std::list<item>::iterator> new_equip_it =
-                        wear( this->i_at( loc.obtain( *this ) ) ) ) {
+                        wear( *loc.obtain( *this ) ) ) {
                     // save iterator to cursor's position
                     std::list<item>::iterator cursor_it = tmp_worn[leftListIndex];
                     // reorder `worn` vector to place new item at cursor
@@ -818,7 +818,7 @@ void player::sort_armor()
                     item &w = *witer;
                     if( invlet == w.invlet ) {
                         ++witer;
-                    } else if( invlet_to_position( invlet ) != INT_MIN ) {
+                    } else if( invlet_to_item( invlet ) != nullptr ) {
                         ++iiter;
                     } else {
                         inv.reassign_item( w, invlet );

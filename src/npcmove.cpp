@@ -1567,7 +1567,7 @@ bool npc::consume_cbm_items( const std::function<bool( const item & )> &filter )
     int index = -1;
     for( size_t i = 0; i < slice.size(); i++ ) {
         const item &it = slice[i]->front();
-        const item &real_item = it.is_container() ?  it.contents.front() : it;
+        const item &real_item = it.is_container() ?  it.contents.legacy_front() : it;
         if( filter( real_item ) ) {
             index = i;
             break;
@@ -1600,7 +1600,8 @@ bool npc::recharge_cbm()
         } else {
             const std::function<bool( const item & )> fuel_filter = [bid]( const item & it ) {
                 for( const itype_id &fid : bid->fuel_opts ) {
-                    return it.typeId() == fid || ( !it.is_container_empty() && it.contents.front().typeId() == fid );
+                    return it.typeId() == fid || ( !it.is_container_empty() &&
+                                                   it.contents.legacy_front().typeId() == fid );
                 }
                 return false;
             };
