@@ -33,6 +33,7 @@
 #include "cursesdef.h"
 #include "inventory.h"
 #include "item_location.h"
+#include "item_pocket.h"
 #include "pldata.h"
 #include "type_id.h"
 #include "magic.h"

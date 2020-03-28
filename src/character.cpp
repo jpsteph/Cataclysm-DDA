@@ -1558,11 +1558,11 @@ int Character::i_add_to_container( const item &it, const bool unloading )
 item_pocket *Character::best_pocket( const item &it )
 {
     item_pocket *ret = weapon.best_pocket( it );
-    for( item &it : worn ) {
-        item_pocket *internal_pocket = it.best_pocket( it );
+    for( item &worn_it : worn ) {
+        item_pocket *internal_pocket = worn_it.best_pocket( it );
         if( internal_pocket != nullptr ) {
             if( ret == nullptr ) {
-                ret = it.best_pocket( it );
+                ret = internal_pocket;
             } else {
                 if( ret->better_pocket( *internal_pocket, it ) ) {
                     ret = internal_pocket;
