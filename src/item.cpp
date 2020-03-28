@@ -280,6 +280,9 @@ void item::check_and_create_magazine_pocket()
         mag_data._item_number_overrides.item_stacks = false;
         mag_data._item_number_overrides.num_items = type->magazine->capacity;
         mag_data.fire_protection = type->magazine->protects_contents;
+        mag_data.max_contains_volume = 20_liter;
+        mag_data.max_contains_weight = 40_kilogram;
+        mag_data.rigid = true;
         contents.add_pocket( mag_data );
         return;
     } else {
@@ -289,6 +292,9 @@ void item::check_and_create_magazine_pocket()
         mag_data._item_number_overrides.item_stacks = true;
         // only one magazine in a pocket, for now
         mag_data._item_number_overrides.num_items = 1;
+        mag_data.rigid = true;
+        mag_data.max_contains_volume = 20_liter;
+        mag_data.max_contains_weight = 40_kilogram;
         // the magazine pocket does not use can_contain like normal CONTAINER pockets
         // so we don't have to worry about having random items be put into the mag
         contents.add_pocket( mag_data );
