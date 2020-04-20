@@ -10,10 +10,7 @@
     "to_hit": -2,
     "material": [ "flesh" ],
     "symbol": ";",
-    "color": "light_green",
-    "contains": "10 L",
-    "seals": true,
-    "watertight": true
+    "color": "light_green"
   },
   {
     "id": "blob_gloople_tank_large",
@@ -21,8 +18,7 @@
     "name": { "str": "gelatinous tank" },
     "copy-from": "blob_gloople_tank",
     "weight": "6 kg",
-    "volume": "60 L",
-    "contains": "60 L"
+    "volume": "60 L"
   },
   {
     "id": "blob_gray_tank",
@@ -35,10 +31,7 @@
     "to_hit": -2,
     "material": [ "flesh" ],
     "symbol": ";",
-    "color": "light_gray",
-    "contains": "30 L",
-    "seals": true,
-    "watertight": true
+    "color": "light_gray"
   },
   {
     "id": "blob_gray_tank_large",
@@ -46,8 +39,7 @@
     "name": { "str": "gray tank" },
     "copy-from": "blob_gray_tank",
     "weight": "10 kg",
-    "volume": "100 L",
-    "contains": "100 L"
+    "volume": "100 L"
   },
   {
     "id": "blob_oozle_tank",
@@ -60,10 +52,7 @@
     "to_hit": -2,
     "material": [ "flesh" ],
     "symbol": ";",
-    "color": "green",
-    "contains": "20 L",
-    "seals": true,
-    "watertight": true
+    "color": "green"
   },
   {
     "id": "blob_oozle_tank_large",
@@ -71,7 +60,6 @@
     "name": { "str": "oozing tank" },
     "copy-from": "blob_oozle_tank",
     "weight": "8 kg",
-    "volume": "80 L",
-    "contains": "80 L"
+    "volume": "80 L"
   }
 ]
